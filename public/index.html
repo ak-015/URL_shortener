@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔗</text></svg>" />
+  <title>Link Shortener</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0c0c0f;
+      --surface:   #141418;
+      --border:    #232329;
+      --accent:    #e8ff47;
+      --accent2:   #ff6b35;
+      --text:      #f0f0f0;
+      --muted:     #6b6b7a;
+      --danger:    #ff4545;
+      --mono:      'DM Mono', monospace;
+      --sans:      'Syne', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      padding: 0;
+    }
+
+    /* ── Layout ── */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 1.5rem 2.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      position: sticky; top: 0;
+      background: var(--bg);
+      z-index: 10;
+    }
+    .logo-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+    .logo-text { font-size: 1rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+    .logo-sub  { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); margin-top: 1px; }
+
+    main { max-width: 860px; margin: 0 auto; padding: 3rem 1.5rem; }
+
+    /* ── Form Card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2.5rem;
+    }
+    .card-title {
+      font-size: 0.7rem;
+      font-family: var(--mono);
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--accent);
+      margin-bottom: 1.5rem;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    .form-grid .full { grid-column: 1 / -1; }
+
+    label {
+      display: block;
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 0.4rem;
+    }
+
+    input[type="text"], input[type="url"] {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 0.65rem 0.85rem;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input:focus { border-color: var(--accent); }
+    input::placeholder { color: var(--muted); }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.7rem 1.4rem;
+      border: none;
+      border-radius: 7px;
+      cursor: pointer;
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: var(--accent); color: #0c0c0f; }
+    .btn-primary:hover { opacity: 0.88; }
+    .btn-danger  { background: transparent; color: var(--danger); border: 1px solid var(--danger); padding: 0.3rem 0.6rem; font-size: 0.72rem; }
+    .btn-danger:hover { background: var(--danger); color: #fff; }
+    .btn-copy    { background: var(--border); color: var(--text); padding: 0.3rem 0.6rem; font-size: 0.72rem; }
+    .btn-copy:hover { background: var(--accent); color: #0c0c0f; }
+
+    .form-actions { margin-top: 1.25rem; display: flex; gap: 0.75rem; align-items: center; }
+
+    /* ── Toast / Alert ── */
+    #toast {
+      position: fixed; bottom: 2rem; right: 2rem;
+      background: var(--accent); color: #0c0c0f;
+      padding: 0.7rem 1.2rem;
+      border-radius: 8px;
+      font-family: var(--mono); font-size: 0.82rem;
+      transform: translateY(20px); opacity: 0;
+      transition: all 0.25s;
+      pointer-events: none;
+      z-index: 100;
+    }
+    #toast.show { transform: translateY(0); opacity: 1; }
+    #toast.error { background: var(--danger); color: #fff; }
+
+    /* ── Links Table ── */
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    .section-title {
+      font-size: 0.7rem; font-family: var(--mono);
+      text-transform: uppercase; letter-spacing: 0.15em;
+      color: var(--muted);
+    }
+    .count-badge {
+      background: var(--border); color: var(--muted);
+      font-family: var(--mono); font-size: 0.68rem;
+      padding: 0.15rem 0.5rem; border-radius: 20px;
+    }
+
+    #links-container { display: flex; flex-direction: column; gap: 0.75rem; }
+
+    .link-row {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.75rem;
+      align-items: center;
+      animation: fadeIn 0.2s ease;
+    }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+
+    .link-label {
+      font-size: 0.7rem; font-family: var(--mono);
+      text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--accent2); margin-bottom: 0.25rem;
+    }
+    .link-short {
+      font-family: var(--mono); font-size: 0.9rem;
+      color: var(--accent); font-weight: 500;
+    }
+    .link-original {
+      font-family: var(--mono); font-size: 0.72rem;
+      color: var(--muted); margin-top: 0.25rem;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      max-width: 480px;
+    }
+    .link-meta {
+      display: flex; gap: 1.2rem; margin-top: 0.5rem;
+    }
+    .meta-item {
+      display: flex; align-items: center; gap: 0.3rem;
+      font-family: var(--mono); font-size: 0.68rem; color: var(--muted);
+    }
+    .meta-item span { color: var(--text); }
+
+    .link-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
+
+    .empty-state {
+      text-align: center; padding: 3rem 1rem;
+      font-family: var(--mono); color: var(--muted); font-size: 0.8rem;
+    }
+    .empty-state .big { font-size: 2.5rem; margin-bottom: 0.75rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-dot"></div>
+  <div>
+    <div class="logo-text">shortlink</div>
+    <div class="logo-sub">link manager</div>
+  </div>
+</header>
+
+<main>
+  <!-- Create form -->
+  <div class="card">
+    <div class="card-title">// new short link</div>
+    <div class="form-grid">
+      <div class="full">
+        <label>Destination URL *</label>
+        <input type="url" id="input-url" placeholder="Enter your link here." />
+      </div>
+      <div>
+        <label>Custom code (optional)</label>
+        <input type="text" id="input-code" placeholder="e.g. resume, cv, linkedin" />
+      </div>
+      <div>
+        <label>Label (optional)</label>
+        <input type="text" id="input-label" placeholder="e.g. LinkedIn, Portfolio" />
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" onclick="createLink()">
+        ⚡ Shorten URL
+      </button>
+      <span id="form-error" style="font-family:var(--mono);font-size:0.75rem;color:var(--danger);"></span>
+    </div>
+  </div>
+
+  <!-- Links list -->
+  <div class="section-header">
+    <div class="section-title">// your links</div>
+    <div class="count-badge" id="count-badge">0 links</div>
+  </div>
+
+  <div id="links-container">
+    <div class="empty-state">
+      <div class="big">🔗</div>
+      No links yet — create your first one above.
+    </div>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+  const BASE = window.location.origin;
+
+  // ── Toast ─────────────────────────────────────────────────────────────────
+  function toast(msg, isError = false) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.className = "show" + (isError ? " error" : "");
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.className = ""; }, 2800);
+  }
+
+  // ── Create ────────────────────────────────────────────────────────────────
+  async function createLink() {
+    const url   = document.getElementById("input-url").value.trim();
+    const code  = document.getElementById("input-code").value.trim();
+    const label = document.getElementById("input-label").value.trim();
+    const errEl = document.getElementById("form-error");
+    errEl.textContent = "";
+
+    if (!url) { errEl.textContent = "URL is required."; return; }
+
+    try {
+      const res  = await fetch("/api/shorten", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url, customCode: code || undefined, label }),
+      });
+      const data = await res.json();
+      if (!res.ok) { errEl.textContent = data.error; return; }
+
+      document.getElementById("input-url").value   = "";
+      document.getElementById("input-code").value  = "";
+      document.getElementById("input-label").value = "";
+      toast("✅ Short link created!");
+      loadLinks();
+    } catch (e) {
+      errEl.textContent = "Network error. Is the server running?";
+    }
+  }
+
+  // ── Load All ──────────────────────────────────────────────────────────────
+  async function loadLinks() {
+    const container = document.getElementById("links-container");
+    try {
+      const res   = await fetch("/api/links");
+      const links = await res.json();
+
+      document.getElementById("count-badge").textContent =
+        `${links.length} link${links.length !== 1 ? "s" : ""}`;
+
+      if (!links.length) {
+        container.innerHTML = `<div class="empty-state"><div class="big">🔗</div>No links yet — create your first one above.</div>`;
+        return;
+      }
+
+      container.innerHTML = links.map(link => `
+        <div class="link-row" id="row-${link.shortCode}">
+          <div>
+            ${link.label ? `<div class="link-label">${esc(link.label)}</div>` : ""}
+            <div class="link-short">${BASE}/<strong>${esc(link.shortCode)}</strong></div>
+            <div class="link-original" title="${esc(link.originalUrl)}">${esc(link.originalUrl)}</div>
+            <div class="link-meta">
+              <div class="meta-item">👆 <span>${link.clicks}</span> clicks</div>
+              <div class="meta-item">📅 <span>${fmtDate(link.createdAt)}</span></div>
+              ${link.lastClickAt ? `<div class="meta-item">⏱ last <span>${fmtDate(link.lastClickAt)}</span></div>` : ""}
+            </div>
+          </div>
+          <div class="link-actions">
+            <button class="btn btn-copy" onclick="copyLink('${esc(BASE)}/${esc(link.shortCode)}')">Copy</button>
+            <button class="btn btn-danger" onclick="deleteLink('${esc(link.shortCode)}')">Del</button>
+          </div>
+        </div>
+      `).join("");
+    } catch (e) {
+      container.innerHTML = `<div class="empty-state">⚠️ Could not load links. Is the server running?</div>`;
+    }
+  }
+
+  // ── Copy ──────────────────────────────────────────────────────────────────
+  function copyLink(url) {
+    navigator.clipboard.writeText(url).then(() => toast("📋 Copied to clipboard!"));
+  }
+
+  // ── Delete ────────────────────────────────────────────────────────────────
+  async function deleteLink(code) {
+    if (!confirm(`Delete /${code}?`)) return;
+    try {
+      const res = await fetch(`/api/links/${code}`, { method: "DELETE" });
+      if (res.ok) { toast("🗑 Deleted."); loadLinks(); }
+      else        { toast("Error deleting.", true); }
+    } catch { toast("Network error.", true); }
+  }
+
+  // ── Utils ─────────────────────────────────────────────────────────────────
+  function esc(s) {
+    return String(s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function fmtDate(d) {
+    return new Date(d).toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" });
+  }
+
+  // Enter key submits
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && document.activeElement.tagName === "INPUT") createLink();
+  });
+
+  // Initial load
+  loadLinks();
+</script>
+</body>
+</html>
