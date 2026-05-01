@@ -133,7 +133,7 @@ app.get("/api/links/:code/stats", async (req, res) => {
 });
 
 // DELETE /api/links/:code — remove a link
-app.delete("/api/links/:code", async (req, res) => {
+app.delete("/api/links/:code", await connectDB(), async (req, res) => {
   try {
     const result = await Url.findOneAndDelete({ shortCode: req.params.code });
     if (!result) return res.status(404).json({ error: "Short URL not found." });
