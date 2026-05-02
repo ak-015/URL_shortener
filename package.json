@@ -1,7 +1,6 @@
 {
   "name": "url-shortener",
   "version": "1.0.0",
-  "type": "module",
   "description": "Self-hosted URL shortener for resume links — Vercel + MongoDB Atlas",
   "main": "api/index.js",
   "scripts": {
